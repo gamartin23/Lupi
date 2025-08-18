@@ -14,6 +14,9 @@ from PySide6.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem, QC
 import qdarktheme
 import zipfile, json, tempfile, subprocess, pathlib
 
+LOG_PATH = ''
+VIDEO_PATH = ''
+
 def resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
         base_path = sys._MEIPASS
@@ -33,7 +36,7 @@ ONEX_ICON_PATH = resource_path("1x.png")
 HALFX_ICON_PATH = resource_path("point5.png")
 POINT2X_ICON_PATH = resource_path("point2.png")
 APPICON = resource_path("synclogs128.ico")
-ver = "1.2"
+ver = "1.3"
 
 # ------------------- UTILIDADES -------------------
 
@@ -451,6 +454,34 @@ class LogVideoPlayer(QMainWindow):
 
         dialog.exec()
     
+    def render_current_frame(self, frame_number: int):
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+        ret, img = self.cap.read()
+        if not ret:
+            return False
+
+        label_w = self.video_label.width()
+        label_h = self.video_label.height()
+        frame_h, frame_w = img.shape[:2]
+        scale = min(label_w / frame_w, label_h / frame_h)
+        new_w = max(1, int(frame_w * scale))
+        new_h = max(1, int(frame_h * scale))
+
+        resized_frame = cv2.copyMakeBorder(
+            cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA),
+            top=(label_h - new_h) // 2,
+            bottom=(label_h - new_h + 1) // 2,
+            left=(label_w - new_w) // 2,
+            right=(label_w - new_w + 1) // 2,
+            borderType=cv2.BORDER_CONSTANT,
+            value=(0, 0, 0)
+        )
+        rgb_image = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2RGB)
+        qt_image = QImage(rgb_image.data, rgb_image.shape[1], rgb_image.shape[0],
+                        rgb_image.strides[0], QImage.Format_RGB888)
+        self.video_label.setPixmap(QPixmap.fromImage(qt_image))
+        return True
+
     def on_log_scroll(self):
         if self.syncing_from_logs:
             return
@@ -461,9 +492,9 @@ class LogVideoPlayer(QMainWindow):
             if video_seconds < 0:
                 return
             frame = int(video_seconds * self.fps)
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
-            self.slider.setValue(frame)
-            self.update_info_label(video_seconds, frame)
+            if self.render_current_frame(frame):
+                self.slider.setValue(frame)
+                self.update_info_label(video_seconds, frame)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
@@ -521,6 +552,8 @@ class LogVideoPlayer(QMainWindow):
         self.slider_dragging = False
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.slider.value())
         self.update_log_highlight(self.slider.value() / self.fps)
+        if self.render_current_frame(self.slider.value()):
+            self.update_log_highlight(self.slider.value() / self.fps)
 
     def slider_drag_move(self, frame):
         self.update_log_highlight(frame / self.fps)
