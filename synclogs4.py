@@ -33,6 +33,7 @@ ONEX_ICON_PATH = resource_path("1x.png")
 HALFX_ICON_PATH = resource_path("point5.png")
 POINT2X_ICON_PATH = resource_path("point2.png")
 APPICON = resource_path("synclogs128.ico")
+ver = "1.2"
 
 # ------------------- UTILIDADES -------------------
 
@@ -384,7 +385,7 @@ class LogVideoPlayer(QMainWindow):
         layout = QVBoxLayout(dialog)
 
         # Label de atribuciones
-        attribution_label = QLabel("Lupi/Synclogs 1.1", dialog)
+        attribution_label = QLabel(f"Lupi/Synclogs {ver}", dialog)
         attribution_label.setStyleSheet("font-size: 20px")
         attribution_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(attribution_label)
