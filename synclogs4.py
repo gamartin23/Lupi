@@ -14,21 +14,25 @@ from PySide6.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem, QC
 import qdarktheme
 import zipfile, json, tempfile, subprocess, pathlib
 
-LOG_ICON_PATH = "logs.png"  
-VIDEO_ICON_PATH = "video.png" 
-PLAY_ICON_PATH = "play.png" 
-PAUSE_ICON_PATH = "pause.png"
-RESTART_ICON_PATH = "restart.png"
-END_ICON_PATH = "end.png"
-PLUS2_ICON_PATH = "plus2.png"
-MINUS2_ICON_PATH = "minus2.png"
-ONEX_ICON_PATH = "1x.png"
-HALFX_ICON_PATH = "point5.png"
-POINT2X_ICON_PATH = "point2.png"
-APPICON = "synclogs128.ico"
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
-LOG_PATH = r'c:\smartcoaching\N20250814-3\smartcoaching\Saved\Logs\smartcoaching-backup-2025.08.14-18.34.54.log'
-VIDEO_PATH = r'c:\Grabacion\2025-08-14 15-33-51.mp4'
+LOG_ICON_PATH = resource_path("logs.png")  
+VIDEO_ICON_PATH = resource_path("video.png")
+PLAY_ICON_PATH = resource_path("play.png") 
+PAUSE_ICON_PATH = resource_path("pause.png")
+RESTART_ICON_PATH = resource_path("restart.png")
+END_ICON_PATH = resource_path("end.png")
+PLUS2_ICON_PATH = resource_path("plus2.png")
+MINUS2_ICON_PATH = resource_path("minus2.png")
+ONEX_ICON_PATH = resource_path("1x.png")
+HALFX_ICON_PATH = resource_path("point5.png")
+POINT2X_ICON_PATH = resource_path("point2.png")
+APPICON = resource_path("synclogs128.ico")
 
 # ------------------- UTILIDADES -------------------
 
@@ -153,12 +157,15 @@ class LogVideoPlayer(QMainWindow):
             self.video_start_time = video_start_time
             self.fps = fps
             self.title = f" | {title}"
+            self.setWindowTitle(f"Lupi{self.title}")
         else:
             # Modo normal desde archivos
             self.logs, self.original_logs = parse_logs(log_path_or_logs)
             self.video_start_time = get_file_creation_time_utc(video_path)
             self.fps = max(1.0, cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FPS))
             self.title = ""
+            self.setWindowTitle(f"Lupi{self.title}")
+            self.setWindowIcon(QIcon(APPICON))
 
         # Estado
         self.playing = False
@@ -176,8 +183,6 @@ class LogVideoPlayer(QMainWindow):
         self.log_lines = [s for _, s in self.logs]
 
         # ---------- UI ----------
-        self.setWindowTitle(f"Lupi{self.title}")
-        self.setWindowIcon(QIcon(APPICON))
         menubar = QMenuBar(self)
         file_menu = QMenu("File", self)
         menubar.addMenu(file_menu)
@@ -390,12 +395,12 @@ class LogVideoPlayer(QMainWindow):
 
         # Imágenes (100x100 cada una)
         img1 = QLabel(dialog)
-        img1.setPixmap(QPixmap("bcspoingus.png").scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        img1.setPixmap(QPixmap(resource_path("bcspoingus.png")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         img1.setAlignment(Qt.AlignCenter)
         img1.setStyleSheet("border-color: gray")
 
         img2 = QLabel(dialog)
-        img2.setPixmap(QPixmap("synclogs128.png").scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        img2.setPixmap(QPixmap(resource_path("synclogs128.png")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         img2.setAlignment(Qt.AlignCenter)
         img2.setStyleSheet("border-color: gray")
 
@@ -750,14 +755,22 @@ class FileSelector(QWidget):
         self.player = LogVideoPlayer(self.selected_video, self.selected_log, title="")
         self.player.showMaximized()
 
-    def open_lupi_from_selector(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select synced logs file", "", "Lupi Analysis (*.lupi)")
-        title = str(os.path.basename(path))
-        if path:
-            video_path, logs, original_logs, video_start_time, fps = import_analysis(path)
-            self.close()
-            player = LogVideoPlayer(video_path, logs, original_logs, video_start_time, fps, title)
-            player.showMaximized()
+    def open_lupi_from_selector(self, fileFlag=False, open_from=None):
+        if not fileFlag:
+            path, _ = QFileDialog.getOpenFileName(self, "Select synced logs file", "", "Lupi Analysis (*.lupi)")
+            title = str(os.path.basename(path))
+            if path:
+                video_path, logs, original_logs, video_start_time, fps = import_analysis(path)
+                self.close()
+                player = LogVideoPlayer(video_path, logs, original_logs, video_start_time, fps, title)
+                player.showMaximized()
+        else:
+            path = open_from
+            title = str(os.path.basename(path))
+            if path:
+                video_path, logs, original_logs, video_start_time, fps = import_analysis(path)
+                player = LogVideoPlayer(video_path, logs, original_logs, video_start_time, fps, title)
+                player.showMaximized()
 
 # ------------------- BARRA DE PROGRESO DE EXPORTACIÓN -------------------
 
@@ -785,17 +798,18 @@ class ExportProgressDialog(QDialog):
 # ------------------- MAIN -------------------
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon("synclogs128.ico"))
+    app.setWindowIcon(QIcon(APPICON))
     qdarktheme.setup_theme()
     testing = False
+    ffile = True
     try:
         if sys.argv[1] and (os.path.splitext(sys.argv[1])[1] == '.lupi'):
             try:
-                open_from = pathlib.Path(sys.argv[1])
-                open_lupi_from_cold(from_file=open_from)
+                open_from_file = pathlib.Path(sys.argv[1])
+                FileSelector.open_lupi_from_selector(FileSelector, fileFlag=ffile, open_from=open_from_file)
             except Exception as e:
                 print(e)
-                open_from = None
+                open_from_file = None
     except:
         open_from = None
         selector = FileSelector(testing_mode=testing)
