@@ -36,7 +36,8 @@ ONEX_ICON_PATH = resource_path("1x.png")
 HALFX_ICON_PATH = resource_path("point5.png")
 POINT2X_ICON_PATH = resource_path("point2.png")
 APPICON = resource_path("synclogs128.ico")
-ver = "1.3"
+ver = "1.4"
+
 
 # ------------------- UTILIDADES -------------------
 
@@ -73,7 +74,7 @@ def export_analysis(player, out_path, progress_dialog=None):
         "ffmpeg_binaries/bin/ffmpeg", "-hide_banner", "-y", "-i", player.video_path,
         "-b:v", "2M", "-preset", "fast", "-c:a", "aac",
         recoded_video_path
-    ])
+    ], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     if progress_dialog:
         progress_dialog.update_step(2, "Saving logs...")
@@ -194,9 +195,8 @@ class LogVideoPlayer(QMainWindow):
         new_action = QAction("New analysis", self)
         def restart_analysis():
             self.close()
-            from synclogs4 import FileSelector  # Import aquí para evitar import circular si usas el mismo archivo
-            selector = FileSelector(testing_mode=testing)
-            selector.show()
+            self.selector = FileSelector(testing_mode=False)
+            self.selector.show()
         new_action.triggered.connect(restart_analysis)
         file_menu.addAction(new_action)
 
@@ -378,6 +378,7 @@ class LogVideoPlayer(QMainWindow):
         self.timer.timeout.connect(self.update_frame)
 
         self.set_speed(1.0)
+        self.render_current_frame(1)
 
     # --- Sincronización desde logs ---
     def show_about_dialog(self):
