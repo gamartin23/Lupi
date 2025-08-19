@@ -36,7 +36,7 @@ ONEX_ICON_PATH = resource_path("1x.png")
 HALFX_ICON_PATH = resource_path("point5.png")
 POINT2X_ICON_PATH = resource_path("point2.png")
 APPICON = resource_path("synclogs128.ico")
-ver = "1.4"
+ver = "1.5"
 
 
 # ------------------- UTILIDADES -------------------
@@ -273,6 +273,7 @@ class LogVideoPlayer(QMainWindow):
             QScrollBar:vertical {width: 30px; height: 80px}
         """)
         self.log_table.verticalScrollBar().valueChanged.connect(self.on_log_scroll)
+        self.log_table.doubleClicked.connect(self.on_log_click)
 
         self.info_label = QLabel("UTC: —    Frame: —")
         self.info_label.setAlignment(Qt.AlignCenter)
@@ -497,6 +498,20 @@ class LogVideoPlayer(QMainWindow):
                 self.slider.setValue(frame)
                 self.update_info_label(video_seconds, frame)
 
+    def on_log_click(self, index):
+        row = index.row()
+        if 0 <= row < len(self.log_times):
+            target_time = self.log_times[row]
+            video_seconds = (target_time - self.video_start_time).total_seconds()
+            if video_seconds < 0:
+                return
+            frame = int(video_seconds * self.fps)
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
+            if self.render_current_frame(frame):
+                self.slider.setValue(frame)
+                self.update_info_label(video_seconds, frame)
+                self.highlight_log_line(row)
+                
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Space:
             self.toggle_play()
@@ -540,11 +555,13 @@ class LogVideoPlayer(QMainWindow):
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         self.slider.setValue(0)
         self.update_log_highlight(0)
+        self.render_current_frame(0)
 
     def go_to_end(self):
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.total_frames - 1)
         self.slider.setValue(self.total_frames - 1)
         self.update_log_highlight(self.total_frames / self.fps)
+        self.render_current_frame(self.total_frames - 1)
 
     def slider_start_drag(self):
         self.slider_dragging = True
