@@ -14,6 +14,33 @@ from PySide6.QtGui import QImage, QPixmap, QStandardItemModel, QStandardItem, QC
 import qdarktheme
 import zipfile, json, tempfile, subprocess, pathlib
 
+from pyupdater.client import Client
+import requests
+
+class AppClient(Client):
+    APP_NAME = "Synclogs"
+    COMPANY_NAME = "KovaTools"
+    HTTP_TIMEOUT = 30
+    MAX_DOWNLOAD_RETRIES = 3
+    
+def check_for_update(current_version: str):
+    try:
+        url = "https://api.github.com/repos/gamartin23/Lupi/releases/latest"
+        resp = requests.get(url, timeout=5).json()
+        
+        latest_version = resp["tag_name"].lstrip("v")
+        assets = resp.get("assets", [])
+        
+        from packaging import version
+        if version.parse(latest_version) > version.parse(current_version):
+            if assets:
+                download_url = assets[0]["browser_download_url"]
+                return latest_version, download_url
+        return None, None
+    except Exception as e:
+        print("Error checking updates:", e)
+        return None, None
+
 LOG_PATH = ''
 VIDEO_PATH = ''
 
@@ -24,19 +51,21 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-LOG_ICON_PATH = resource_path("logs.png")  
-VIDEO_ICON_PATH = resource_path("video.png")
-PLAY_ICON_PATH = resource_path("play.png") 
-PAUSE_ICON_PATH = resource_path("pause.png")
-RESTART_ICON_PATH = resource_path("restart.png")
-END_ICON_PATH = resource_path("end.png")
-PLUS2_ICON_PATH = resource_path("plus2.png")
-MINUS2_ICON_PATH = resource_path("minus2.png")
-ONEX_ICON_PATH = resource_path("1x.png")
-HALFX_ICON_PATH = resource_path("point5.png")
-POINT2X_ICON_PATH = resource_path("point2.png")
-APPICON = resource_path("synclogs128.ico")
-ver = "1.5"
+print("Looking for:", resource_path("img/video.png"))
+
+LOG_ICON_PATH = resource_path("img/logs.png")  
+VIDEO_ICON_PATH = resource_path("img/video.png")
+PLAY_ICON_PATH = resource_path("img/play.png") 
+PAUSE_ICON_PATH = resource_path("img/pause.png")
+RESTART_ICON_PATH = resource_path("img/restart.png")
+END_ICON_PATH = resource_path("img/end.png")
+PLUS2_ICON_PATH = resource_path("img/plus2.png")
+MINUS2_ICON_PATH = resource_path("img/minus2.png")
+ONEX_ICON_PATH = resource_path("img/1x.png")
+HALFX_ICON_PATH = resource_path("img/point5.png")
+POINT2X_ICON_PATH = resource_path("img/point2.png")
+APPICON = resource_path("img/synclogs128.ico")
+ver = "1.6"
 
 
 # ------------------- UTILIDADES -------------------
@@ -218,6 +247,27 @@ class LogVideoPlayer(QMainWindow):
         about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
+        
+        check_update_action = QAction("Check for Updates", self)
+
+        def do_update():
+            QMessageBox.information(self, "Checking...", "Looking for updates...")
+            latest_version, url = check_for_update(ver)
+            if latest_version:
+                reply = QMessageBox.question(
+                    self,
+                    "Update available",
+                    f"A new version ({latest_version}) is available.\n\nDo you want to download it?",
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                if reply == QMessageBox.Yes:
+                    import webbrowser
+                    webbrowser.open(url)
+            else:
+                QMessageBox.information(self, "Up to date", "You already have the latest version.")
+
+        check_update_action.triggered.connect(do_update)
+        help_menu.addAction(check_update_action)
                 
         self.log_table = QTableView()
         self.log_model = QStandardItemModel(len(self.log_lines), 2)
@@ -401,12 +451,12 @@ class LogVideoPlayer(QMainWindow):
 
         # Imágenes (100x100 cada una)
         img1 = QLabel(dialog)
-        img1.setPixmap(QPixmap(resource_path("bcspoingus.png")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        img1.setPixmap(QPixmap(resource_path("img/bcspoingus.png")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         img1.setAlignment(Qt.AlignCenter)
         img1.setStyleSheet("border-color: gray")
 
         img2 = QLabel(dialog)
-        img2.setPixmap(QPixmap(resource_path("synclogs128.png")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        img2.setPixmap(QPixmap(resource_path("img/synclogs128.png")).scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         img2.setAlignment(Qt.AlignCenter)
         img2.setStyleSheet("border-color: gray")
 
