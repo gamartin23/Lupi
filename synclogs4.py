@@ -51,8 +51,6 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-print("Looking for:", resource_path("img/video.png"))
-
 LOG_ICON_PATH = resource_path("img/logs.png")  
 VIDEO_ICON_PATH = resource_path("img/video.png")
 PLAY_ICON_PATH = resource_path("img/play.png") 
@@ -247,9 +245,9 @@ class LogVideoPlayer(QMainWindow):
         about_action = QAction("About", self)
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
+
         
         check_update_action = QAction("Check for Updates", self)
-
         def do_update():
             QMessageBox.information(self, "Checking...", "Looking for updates...")
             latest_version, url = check_for_update(ver)
@@ -268,7 +266,7 @@ class LogVideoPlayer(QMainWindow):
 
         check_update_action.triggered.connect(do_update)
         help_menu.addAction(check_update_action)
-                
+                    
         self.log_table = QTableView()
         self.log_model = QStandardItemModel(len(self.log_lines), 2)
         self.log_model.setHorizontalHeaderLabels(["Timestamp", "Console output"])
