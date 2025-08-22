@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Build release package
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          FILENAME="lupi-${TAG#v}-win.zip"
+          zip -r "$FILENAME" . -x ".git/*" ".github/*"
+          
+      - name: Generate changelog
+              id: changelog
+              uses: actions/github-script@v7
+              with:
+                script: |
+                  const { execSync } = require("child_process");
+                  const tag = process.env.GITHUB_REF_NAME;
+      
+                  // Traer todos los tags ordenados por fecha
+                  const tags = execSync("git tag --sort=creatordate", { encoding: "utf8" })
+                    .trim()
+                    .split("\n");
+      
+                  const index = tags.indexOf(tag);
+                  const prevTag = index > 0 ? tags[index - 1] : null;
+      
+                  let log;
+                  if (prevTag) {
+                    log = execSync(`git log ${prevTag}..${tag} --pretty=format:"- %s (%h)"`, { encoding: "utf8" });
+                  } else {
+                    log = execSync(`git log ${tag} --pretty=format:"- %s (%h)"`, { encoding: "utf8" });
+                  }
+      
+                  core.setOutput("body", log || "No commits");
+                  
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }} 
+          tag_name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.body }}
+          files: lupi-*-win.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
