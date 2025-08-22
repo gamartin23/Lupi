@@ -20,29 +20,29 @@ jobs:
           zip -r "$FILENAME" . -x ".git/*" ".github/*"
           
       - name: Generate changelog
-              id: changelog
-              uses: actions/github-script@v7
-              with:
-                script: |
-                  const { execSync } = require("child_process");
-                  const tag = process.env.GITHUB_REF_NAME;
-      
-                  // Traer todos los tags ordenados por fecha
-                  const tags = execSync("git tag --sort=creatordate", { encoding: "utf8" })
-                    .trim()
-                    .split("\n");
-      
-                  const index = tags.indexOf(tag);
-                  const prevTag = index > 0 ? tags[index - 1] : null;
-      
-                  let log;
-                  if (prevTag) {
-                    log = execSync(`git log ${prevTag}..${tag} --pretty=format:"- %s (%h)"`, { encoding: "utf8" });
-                  } else {
-                    log = execSync(`git log ${tag} --pretty=format:"- %s (%h)"`, { encoding: "utf8" });
-                  }
-      
-                  core.setOutput("body", log || "No commits");
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+            script: |
+              const { execSync } = require("child_process");
+              const tag = process.env.GITHUB_REF_NAME;
+  
+              // Traer todos los tags ordenados por fecha
+              const tags = execSync("git tag --sort=creatordate", { encoding: "utf8" })
+                .trim()
+                .split("\n");
+  
+              const index = tags.indexOf(tag);
+              const prevTag = index > 0 ? tags[index - 1] : null;
+  
+              let log;
+              if (prevTag) {
+                log = execSync(`git log ${prevTag}..${tag} --pretty=format:"- %s (%h)"`, { encoding: "utf8" });
+              } else {
+                log = execSync(`git log ${tag} --pretty=format:"- %s (%h)"`, { encoding: "utf8" });
+              }
+  
+              core.setOutput("body", log || "No commits");
                   
       - name: Create release
         uses: softprops/action-gh-release@v2
