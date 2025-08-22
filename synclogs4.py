@@ -63,7 +63,7 @@ ONEX_ICON_PATH = resource_path("img/1x.png")
 HALFX_ICON_PATH = resource_path("img/point5.png")
 POINT2X_ICON_PATH = resource_path("img/point2.png")
 APPICON = resource_path("img/synclogs128.ico")
-ver = "1.6"
+ver = "1.7"
 
 
 # ------------------- UTILIDADES -------------------
@@ -282,11 +282,21 @@ class LogVideoPlayer(QMainWindow):
             msg_item = QStandardItem(clean_msg)
             msg_item.setEditable(False)
             
-            if "unhandled exception" in clean_msg.lower():
+            if "unhandled exception" in clean_msg.lower() or "callstack" in clean_msg.lower() or "logwindows: error" in clean_msg.lower():
                 ts_item.setBackground(QColor("#2b0000"))  # fondo rojo muy oscuro
                 msg_item.setBackground(QColor("#2b0000"))
                 ts_item.setForeground(QColor("#ff9999"))  # texto rojo claro
                 msg_item.setForeground(QColor("#ff9999"))
+            elif "win requestexit" in clean_msg.lower():
+                ts_item.setBackground(QColor("#000316"))  # oscuro amarillento
+                msg_item.setBackground(QColor("#000316"))
+                ts_item.setForeground(QColor("#9FD8DC"))  # texto amarillo claro
+                msg_item.setForeground(QColor("#9FD8DC"))
+            elif "logmemory" in clean_msg.lower():
+                ts_item.setBackground(QColor("#000F16"))  # oscuro amarillento
+                msg_item.setBackground(QColor("#000F16"))
+                ts_item.setForeground(QColor("#9FDCD4"))  # texto amarillo claro
+                msg_item.setForeground(QColor("#9FDCD4"))
             elif self.video_start_time <= t <= video_end_time:
                 ts_item.setBackground(QColor("#161600"))  # oscuro amarillento
                 msg_item.setBackground(QColor("#161600"))
@@ -323,7 +333,7 @@ class LogVideoPlayer(QMainWindow):
         self.log_table.verticalScrollBar().valueChanged.connect(self.on_log_scroll)
         self.log_table.doubleClicked.connect(self.on_log_click)
 
-        self.info_label = QLabel("UTC: —    Frame: —")
+        self.info_label = QLabel("")
         self.info_label.setAlignment(Qt.AlignCenter)
         self.info_label.setFont(QFont("Consolas", 14, QFont.Bold))
 
@@ -604,12 +614,14 @@ class LogVideoPlayer(QMainWindow):
         self.slider.setValue(0)
         self.update_log_highlight(0)
         self.render_current_frame(0)
+        self.update_info_label(0, 0)
 
     def go_to_end(self):
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.total_frames - 1)
         self.slider.setValue(self.total_frames - 1)
         self.update_log_highlight(self.total_frames / self.fps)
         self.render_current_frame(self.total_frames - 1)
+        self.update_info_label(self.total_frames/self.fps, self.total_frames - 1)
 
     def slider_start_drag(self):
         self.slider_dragging = True
